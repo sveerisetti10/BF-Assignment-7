@@ -11,7 +11,30 @@ library(colourpicker) # you might need to install this.
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
+    h1("BF591 Assignment 7: Working with RShiny"),
+    h6("To use this application, download the CSV deseq_res.csv from the data directory of this app's repository."),
     
+    sidebarPanel(
+        fileInput("Browse", "Load differential expression results", accept = ".csv"), 
+
+        p("A volcano plot can be generated with log_2 fold-change on the x-axis and p-adjusted on the y-axis."),
+        br(),
+        
+        radioButtons("column_choice_x", "Choose the column for the x-axis", 
+                     c("baseMean", "log2FoldChange", "lfcSE", "stat", "pvalue", "padj")),
+        
+        radioButtons("column_choice_y", "Choose the column for the y-axis", 
+                     c("baseMean", "log2FoldChange", "lfcSE", "stat", "pvalue", "padj")),
+        
+        colourInput("color_1", "Base Point Color", "C47DF0"), 
+        colourInput("colour_2", "Highlight Point Color", "#57E657"),
+        
+        sliderInput("p_adjusting", "Select the magnitude of the p adjusted coloring:", min = -300, max = 0, value = 30), 
+        
+        submitButton("Plot", icon=NULL, width = 300)
+
+    )
+
 )
 
 # Define server logic required to draw a histogram
