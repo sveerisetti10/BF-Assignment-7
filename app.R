@@ -16,7 +16,7 @@ ui <- fluidPage(
     
     sidebarPanel(
         fileInput("input_data", "Load differential expression results", accept = ".csv"), 
-
+        
         p("A volcano plot can be generated with log_2 fold-change on the x-axis and p-adjusted on the y-axis."),
         br(),
         
@@ -32,14 +32,18 @@ ui <- fluidPage(
         sliderInput("slider", "Select the magnitude of the p adjusted coloring:", min = -300, max = 0, value = 30), 
         
         submitButton("Plot", icon=NULL, width = 300),
-        
-        plotOutput(outputId = "volcano"),
-        tableOutput(outputId = "table")
-        
+    
+    mainPanel(
+        tabsetPanel(
+            tabPanel("Plot",
+                     plotOutput(outputId = "volcano")
+                     ),
+            tabPanel("Table",
+                      tableOutput(outputId = "table"))
+        )
     )
-
 )
-
+)
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
     
@@ -52,11 +56,12 @@ server <- function(input, output, session) {
     #' our case, look for the uploaded file's datapath argument and load it with 
     #' read.csv. Return this data frame in the normal return() style.
     load_data <- reactive({
-        
         read.csv(input$input_data$datapath, header = TRUE)
         
         return()
+        
     })
+    
     
     #' Volcano plot
     #'
@@ -85,8 +90,8 @@ server <- function(input, output, session) {
         #the volcano plot should display whether it is above the user's threshold
         #or not. 
         input_data$sorting <- "NA"
-        input_data$sorting[input_data$padj < 1E(slider)] <- "TRUE"
-        input_data$sorting[input_data$padj > 1E(slider)] <- "FALSE"
+        input_data$sorting[input_data$padj < 1*10**(slider)] <- "TRUE"
+        input_data$sorting[input_data$padj > 1*10**(slider)] <- "FALSE"
         
         #The two color points are going to be based on what the user chooses
         #These colors will then be assigned to either "TRUE" or "FALSE"
@@ -94,7 +99,7 @@ server <- function(input, output, session) {
         names(point_colors) <- c("TRUE", "FALSE")
         
         volcano_friend <- 
-            ggplot(input_data, aes(x = x_name, y = y_name, col = sorting)) +
+            ggplot(load_data(), aes(x = x_name, y = y_name, col = input_data$sorting)) +
             geom_point() +
             xlab(x_name)+
             ylab(y_name)+
@@ -108,7 +113,7 @@ server <- function(input, output, session) {
     }
     #' Draw and filter table
     #'
-    #' @param input_data Data frame loaded by load_data()
+    #' @param load_data Data frame loaded by load_data()
     #' @param slider Negative number, typically from the slider input.
     #'
     #' @return Data frame filtered to p-adjusted values that are less than 
@@ -129,27 +134,31 @@ server <- function(input, output, session) {
     draw_table <- function(input_data, slider) {
         #This is done just to make sure that that input_data is in a tibble or
         #dataframe format 
-        slider_tibble <- as.tibble(input_data)
+        slider_tibble <- as_tibble(input_data)
         format(slider_tibble)
         
         #Here we are taking the tibble we just made and then we want to 
         #specifically target out the padj values that are less than 1E(slider)
-        filtered_tible <- slider_tibble %>%
-            filter(padj < 1E(slider)) %>%
-        return()
+        filtered_tibble <- slider_tibble %>%
+            filter(padj < 1*10**(slider)) 
+            
+        return(filtered_tibble)
     }
     
     #' These outputs aren't really functions, so they don't get a full skeleton, 
     #' but use the renderPlot() and renderTabel() functions to return() a plot 
     #' or table object, and those will be displayed in your application.
     output$volcano <- renderPlot({
-        return(volcano_friend)
-    
+        
+        volcano_plot(load_data(), input$x_name, input$y_name, 
+                     input$slider, input$color_1, input$color_2) 
+        
     })
     
     # Same here, just return the table as you want to see it in the web page
     output$table <- renderPlot({
-        return(filtered_table)
+        
+        draw_table(input$input_data$datapath, input$slider)
         
     })
 }
